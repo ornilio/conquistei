@@ -20,6 +20,11 @@
       <a href="{{ url_for('routes.nova_conquista') }}" class="user-action">🏆 Minhas Conquistas</a>
       <a href="{{ url_for('routes.nova_conquista') }}" class="user-action">📍 Nova Conquista</a>
       <a href="{{ url_for('routes.editar_perfil') }}" class="user-action">🧙 Perfil</a>
+     {% if current_user.is_authenticated and current_user.is_master %}
+        <a href="{{ url_for('routes.painel_adm') }}" class="user-action">🛡️ Painel ADM</a>
+      {% endif %}
+
+
       <a href="{{ url_for('routes.logout') }}" class="user-action">🚪 Sair</a>  
     </div>
   </div>

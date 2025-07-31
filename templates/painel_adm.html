@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4 text-center">Painel Administrativo</h1>
+
+    <!-- 🔍 Filtro de usuários -->
+    <form method="GET" class="row g-3 mb-4">
+        <div class="col-md-4">
+            <input type="text" name="filtro" class="form-control" placeholder="Buscar por nome ou email" value="{{ request.args.get('filtro', '') }}">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">Buscar</button>
+        </div>
+    </form>
+
+    <!-- 🧾 Tabela de usuários -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover shadow-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Master?</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in usuarios %}
+                <tr>
+                    <td>{{ u.username }}</td>
+                    <td>{{ u.email }}</td>
+                    <td>{{ "✅" if u.is_master else "❌" }}</td>
+                    <td>
+                        <a href="{{ url_for('routes.toggle_master', usuario_id=u.id) }}" class="btn btn-sm btn-warning">Alterar Status</a>
+                        <a href="{{ url_for('routes.excluir_usuario', usuario_id=u.id) }}" class="btn btn-sm btn-danger">Excluir</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,11 +1,10 @@
-from app import app, db
-from models import QuarteiraoConquistado
+from app import app  # importa sua instância Flask
+from models import Usuario
 
-def resetar_quarteiroes():
-    with app.app_context():
-        db.session.execute(db.delete(QuarteiraoConquistado))
-        db.session.commit()
-        print("🔥 Quarteirões conquistados removidos do banco dominios.db!")
+with app.app_context():
+    usuario_master = Usuario.query.filter_by(is_master=True).first()
 
-if __name__ == "__main__":
-    resetar_quarteiroes()
+    if usuario_master:
+        print(f"🛡️ Usuário master: {usuario_master.username} | Email: {usuario_master.email}")
+    else:
+        print("❌ Nenhum usuário master encontrado.")

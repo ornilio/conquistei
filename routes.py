@@ -1,78 +1,92 @@
 # 📦 Importações organizadas por categoria
 
 # Flask e utilitários
-from flask import Blueprint, render_template, request, redirect, flash, jsonify, url_for, make_response
+from flask import Blueprint, render_template, request, redirect, flash, jsonify, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from models import Missao, QuarteiraoConquistado
-import random
-from sqlalchemy.orm import selectinload
-
-# JWT (Autenticação)
-from flask_jwt_extended import (
-    jwt_required, get_jwt_identity, create_access_token,
-    set_access_cookies, unset_jwt_cookies, verify_jwt_in_request
-)
-
-# Data e arquivos
 from datetime import datetime
+from functools import wraps
+from flask_login import login_user, logout_user, current_user, login_required
 import os
+import random
 
 # Modelos da aplicação
 from extensions import db
-from models import Usuario, Conquista, Missao, QuarteiraoConquistado
+from models import Usuario, Missao, Conquista, QuarteiraoConquistado
 
 # 🔧 Instância Blueprint
 routes = Blueprint("routes", __name__)
 
+
+def master_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_master:
+            flash("Acesso restrito ao usuário master.")
+            return redirect(url_for("routes.home"))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+@routes.route("/painel_adm")
+@master_required
+def painel_adm():
+    filtro = request.args.get("filtro", "").strip()
+    if filtro:
+        usuarios = Usuario.query.filter(
+            (Usuario.username.ilike(f"%{filtro}%")) |
+            (Usuario.email.ilike(f"%{filtro}%"))
+        ).all()
+    else:
+        usuarios = Usuario.query.all()
+    return render_template("painel_adm.html", usuarios=usuarios)
+
+
+@routes.route("/toggle_master/<int:usuario_id>")
+@master_required
+def toggle_master(usuario_id):
+    usuario = Usuario.query.get(usuario_id)
+    if usuario:
+        usuario.is_master = not usuario.is_master
+        db.session.commit()
+        flash("Status de master atualizado.")
+    else:
+        flash("Usuário não encontrado.")
+    return redirect(url_for("routes.painel_adm"))
+
+@routes.route("/excluir_usuario/<int:usuario_id>")
+@master_required
+def excluir_usuario(usuario_id):
+    usuario = Usuario.query.get(usuario_id)
+    if usuario:
+        db.session.delete(usuario)
+        db.session.commit()
+        flash("Usuário excluído com sucesso.")
+    else:
+        flash("Usuário não encontrado.")
+    return redirect(url_for("routes.painel_adm"))
+
+
 # 🏠 Página de login via formulário HTML
+
 @routes.route("/", methods=["GET", "POST"])
 def login_page():
-    """
-    Renderiza a página de login. Processa login via formulário HTML e define cookies JWT.
-    """
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
-
         usuario = Usuario.query.filter_by(username=username).first()
 
         if usuario and check_password_hash(usuario.senha, password):
-            access_token = create_access_token(identity=str(usuario.id))
+            login_user(usuario)
             flash("Login realizado com sucesso!")
-            response = make_response(redirect(url_for("routes.home")))
-            set_access_cookies(response, access_token)
-            return response
+            return redirect(url_for("routes.home"))
         else:
             flash("Usuário ou senha inválidos.")
             return redirect(url_for("routes.login_page"))
 
     return render_template("login.html", ano=datetime.now().year)
-
-# 🔐 Login via API REST (JSON)
-@routes.route("/login", methods=["POST"])
-def login_api():
-    """
-    Autenticação via JSON. Retorna token JWT caso credenciais estejam corretas.
-    """
-    dados = request.get_json()
-    username = dados.get("username")
-    senha = dados.get("senha")
-
-    usuario = Usuario.query.filter_by(username=username).first()
-
-    if usuario and check_password_hash(usuario.senha, senha):
-        token = create_access_token(identity=usuario.id)
-        return jsonify(token=token), 200
-    else:
-        return jsonify(erro="Usuário ou senha inválidos."), 401
-
-# 📝 Cadastro via formulário HTML
 @routes.route("/cadastro", methods=["GET", "POST"])
 def cadastro():
-    """
-    Renderiza e processa o cadastro via formulário HTML.
-    """
     if request.method == "POST":
         username = request.form["username"]
         email = request.form["email"]
@@ -92,15 +106,21 @@ def cadastro():
             return redirect(url_for("routes.cadastro"))
 
         senha_hash = generate_password_hash(password)
-        novo_usuario = Usuario(username=username, email=email, senha=senha_hash)
+        primeiro_usuario = Usuario.query.first()
+        novo_usuario = Usuario(
+            username=username,
+            email=email,
+            senha=senha_hash,
+            is_master=False if primeiro_usuario else True
+        )
 
         db.session.add(novo_usuario)
         db.session.commit()
-
         flash("Cadastro realizado com sucesso!")
         return redirect(url_for("routes.login_page"))
 
     return render_template("cadastro.html", ano=datetime.now().year)
+
 
 # 📲 Cadastro via API REST (JSON)
 @routes.route("/usuarios", methods=["POST"])
@@ -135,26 +155,11 @@ def criar_usuario():
     db.session.commit()
 
     return jsonify({'mensagem': 'Usuário cadastrado com sucesso!'}), 201
-
-# 🏡 Página inicial após login
 @routes.route("/home")
+@login_required
 def home():
-    try:
-        # 🔐 Valida o token JWT
-        verify_jwt_in_request()
-        usuario_id = get_jwt_identity()
-    except Exception as e:
-        print("Erro ao verificar token:", e)
-        flash("Token inválido ou ausente.")
-        return redirect(url_for("routes.login_page"))
-
-    # 👤 Busca o usuário pelo ID
-    usuario = Usuario.query.get(usuario_id)
-    if not usuario:
-        flash("Usuário não encontrado.")
-        return redirect(url_for("routes.login_page"))
-
-    # 🧭 Busca todas as conquistas do usuário via join com Missao
+    usuario_id = current_user.id
+    missoes = Missao.query.filter_by(usuario_id=usuario_id).all()
     conquistas = (
         QuarteiraoConquistado.query
         .join(QuarteiraoConquistado.missao)
@@ -163,52 +168,33 @@ def home():
         .all()
     )
 
-    # 🛠️ Enriquecendo cada conquista com tempo/distância da missão
     for conquista in conquistas:
         if conquista.missao:
-            # Arredondando com precisão de 2 casas decimais
             conquista.distancia_km = round(conquista.missao.distancia_km or 0, 2)
             conquista.duracao_minutos = conquista.missao.duracao_minutos or 0
 
-    # 📊 Soma total de tempo/distância de todas as missões
-    missoes = Missao.query.filter_by(usuario_id=usuario_id).all()
     tempo_total = sum(m.duracao_minutos for m in missoes if m.duracao_minutos)
     distancia_total = round(sum(m.distancia_km for m in missoes if m.distancia_km), 2)
 
-    print("Tempo total:", tempo_total)
-
-    # 🖥️ Renderiza o template com todos os dados prontos
     return render_template(
         "home.html",
-        usuario=usuario,
+        usuario=current_user,
         ano=datetime.now().year,
         conquistas=conquistas,
         tempo_total=tempo_total,
         distancia_total=distancia_total
     )
 
-
-# 🚪 Logout e remoção de cookies
 @routes.route("/logout")
+@login_required
 def logout():
-    """
-    Finaliza a sessão do usuário removendo cookies JWT e redireciona para login.
-    """
-    response = redirect(url_for("routes.login_page"))
-    unset_jwt_cookies(response)
+    logout_user()
     flash("Sessão encerrada com sucesso!")
-    return response
+    return redirect(url_for("routes.login_page"))
 
-# 🖼️ Upload de avatar do usuário
 @routes.route("/upload-avatar", methods=["POST"])
-@jwt_required()
+@login_required
 def upload_avatar():
-    """
-    Permite ao usuário enviar uma nova imagem de avatar.
-    """
-    usuario_id = get_jwt_identity()
-    usuario = Usuario.query.get(usuario_id)
-
     if "avatar" not in request.files:
         flash("Nenhuma imagem enviada.")
         return redirect(url_for("routes.home"))
@@ -222,20 +208,17 @@ def upload_avatar():
     path = os.path.join("static", "avatars", filename)
     file.save(path)
 
-    usuario.avatar = filename
+    current_user.avatar = filename
     db.session.commit()
 
     flash("Avatar atualizado com sucesso!")
     return redirect(url_for("routes.home"))
 
+
 # 🗺️ Registro de localização e desbloqueio de conquista
 @routes.route("/localizacao", methods=["POST"])
-@jwt_required()
+@login_required
 def receber_localizacao():
-    """
-    Recebe os dados de localização, duração e distância para registrar uma nova conquista.
-    """
-    usuario_id = get_jwt_identity()
     dados = request.get_json()
 
     latitude = dados.get("latitude")
@@ -246,11 +229,8 @@ def receber_localizacao():
     if not all([latitude, longitude, duracao, distancia]):
         return jsonify({"erro": "Dados incompletos."}), 400
 
-    print(f"Usuário {usuario_id} está em: ({latitude}, {longitude})")
-    print(f"⏱️ Tempo: {duracao} min | 📏 Distância: {distancia} km")
-
     nova_conquista = Conquista(
-        usuario_id=int(usuario_id),
+        usuario_id=current_user.id,
         latitude=latitude,
         longitude=longitude,
         nome_area="Área conquistada",
@@ -265,19 +245,13 @@ def receber_localizacao():
 
 # 🏆 Página que celebra a conquista desbloqueada
 @routes.route("/nova-conquista")
+@login_required
 def nova_conquista():
-    try:
-        verify_jwt_in_request()
-        usuario_id = get_jwt_identity()
-    except Exception as e:
-        flash("Token inválido.")
-        return redirect(url_for("routes.login_page"))
-
     conquistas = QuarteiraoConquistado.query.join(Missao).filter(
-        Missao.usuario_id == usuario_id
+        Missao.usuario_id == current_user.id
     ).all()
 
-    return render_template("nova_conquista.html", usuario_id=usuario_id, conquistas=conquistas)
+    return render_template("nova_conquista.html", usuario_id=current_user.id, conquistas=conquistas)
 
 
 
@@ -296,9 +270,11 @@ def alterar_senha():
 
 
 def gerar_nome_area():
-    prefixos = ['Setor', 'Zona', 'Distrito', 'Bloco']
-    codigos = ['Alpha', 'Bravo', 'Echo', 'Zeta', 'Delta']
-    return f"{random.choice(prefixos)} {random.choice(codigos)}-{random.randint(100,999)}"
+    prefixos = ['Setor', 'Zona', 'Distrito', 'Bloco', 'Região', 'Território']
+    codigos = ['Alpha', 'Bravo', 'Echo', 'Zeta', 'Delta', 'Omega', 'Nova']
+    complemento = ['Norte', 'Sul', 'Central', 'Leste', 'Oeste']
+    return f"{random.choice(prefixos)} {random.choice(codigos)}-{random.randint(100,999)} {random.choice(complemento)}"
+
 
 @routes.route('/registrar-missao', methods=['POST'])
 def registrar_missao_completa():
@@ -353,22 +329,21 @@ def registrar_missao_completa():
     db.session.commit()
     return jsonify({'mensagem': 'Missão salva com sucesso!'})
 
-
-@routes.route('/minhas-conquistas', methods=['GET'])
+@routes.route("/minhas-conquistas", methods=["GET"])
+@login_required
 def listar_conquistas():
-    usuario_id = request.args.get('usuario_id')  # ou use autenticação com JWT
-
     conquistas = QuarteiraoConquistado.query.join(Missao).filter(
-        Missao.usuario_id == usuario_id
+        Missao.usuario_id == current_user.id
     ).all()
 
     resultado = [{
-    'id': c.id,
-    'nome_area': c.nome_area,
-    'coordenadas': c.poligono_geojson,
-    'timestamp': c.timestamp.isoformat(),
-    'distancia_km': c.missao.distancia_km,
-    'duracao_minutos': c.missao.duracao_minutos,
-    'categoria': getattr(c, 'categoria', None)
-} for c in conquistas]
+        'id': c.id,
+        'nome_area': c.nome_area,
+        'coordenadas': c.poligono_geojson,
+        'timestamp': c.timestamp.isoformat(),
+        'distancia_km': c.missao.distancia_km,
+        'duracao_minutos': c.missao.duracao_minutos,
+        'categoria': getattr(c, 'categoria', None)
+    } for c in conquistas]
 
+    return jsonify(resultado), 200

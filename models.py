@@ -1,12 +1,15 @@
 from extensions import db  # importa de extensions.py, sem depender de app.py
 from datetime import datetime
 from sqlalchemy.orm import relationship
+from flask_login import UserMixin
 
-class Usuario(db.Model):
+class Usuario(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     senha = db.Column(db.String(200), nullable=False)
+    is_master = db.Column(db.Boolean, default=False)
+
 
 class Conquista(db.Model):
     __bind_key__ = 'dominios'  # 👈 isso liga o modelo ao banco secundário
@@ -43,4 +46,3 @@ class QuarteiraoConquistado(db.Model):
 
     # ✅ Relacionamento explícito com Missao
     missao = relationship("Missao", backref="quarteiroes")
-
