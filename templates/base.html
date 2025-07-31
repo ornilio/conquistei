@@ -2,8 +2,10 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- 🔧 ESSENCIAL PARA MOBILE -->
   <title>{% block title %}Conquistei{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block head %}{% endblock %}
 </head>
 <body>
 
@@ -14,7 +16,7 @@
       <span class="user-name">{{ current_user.username }}</span>
     </div>
     <div class="user-actions">
-      <a href="{{ url_for('routes.home') }}"  class="user-action">🏠 Início</a>
+      <a href="{{ url_for('routes.home') }}" class="user-action">🏠 Início</a>
       <a href="{{ url_for('routes.nova_conquista') }}" class="user-action">🏆 Minhas Conquistas</a>
       <a href="{{ url_for('routes.nova_conquista') }}" class="user-action">📍 Nova Conquista</a>
       <a href="{{ url_for('routes.editar_perfil') }}" class="user-action">🧙 Perfil</a>
@@ -37,7 +39,6 @@
 
   {% block extra_scripts %}
   {% endblock %}
-
 
 </body>
 </html>

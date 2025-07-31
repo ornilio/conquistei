@@ -2,35 +2,42 @@
 
 {% block title %}Cadastro - Conquistei{% endblock %}
 
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/cadastro.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="form-container">
-  <h2>Cadastro de Usuário</h2>
+  <h2 class="titulo-cadastro">📝 Criar Conta</h2>
 
   {% with mensagens = get_flashed_messages() %}
     {% if mensagens %}
-      <div class="flash-messages">
+      <div class="mensagem-feedback">
         {% for mensagem in mensagens %}
-          <p class="flash">{{ mensagem }}</p>
+          <div class="mensagem-alerta">{{ mensagem }}</div>
         {% endfor %}
       </div>
     {% endif %}
   {% endwith %}
 
-  <form action="/cadastro" method="POST">
-    <label for="username">Usuário</label>
-    <input type="text" id="username" name="username" required>
+  <form action="/cadastro" method="POST" class="formulario-autenticacao">
+    <label for="username">Nome de usuário</label>
+    <input type="text" id="username" name="username" placeholder="Ex: Usuario" required>
 
     <label for="email">E-mail</label>
-    <input type="email" id="email" name="email" required>
+    <input type="email" id="email" name="email" placeholder="seuemail@exemplo.com" required>
 
     <label for="password">Senha</label>
-    <input type="password" id="password" name="password" required>
+    <input type="password" id="password" name="password" placeholder="********" required>
 
-    <label for="confirm">Confirmar Senha</label>
-    <input type="password" id="confirm" name="confirm" required>
+    <label for="confirm">Confirmar senha</label>
+    <input type="password" id="confirm" name="confirm" placeholder="********" required>
 
-    <button type="submit">Cadastrar</button>
-    <p class="signup-link">Já tem conta? <a href="/">Faça login</a></p>
+    <button type="submit" class="botao-cadastro">Cadastrar</button>
+
+    <p class="link-login">
+      Já possui conta? <a href="{{ url_for('routes.login_page') }}">Acesse aqui</a>
+    </p>
   </form>
 </div>
 {% endblock %}

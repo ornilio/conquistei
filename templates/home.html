@@ -1,80 +1,148 @@
 {% extends "base.html" %}
 
-{% block title %}🏁 Base de Comando{% endblock %}
+{% block title %}
+  🏁 Base de Comando
+{% endblock %}
 
 {% block head %}
   <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}" type="image/png">
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles/base_comando.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base_comando.css') }}">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 {% endblock %}
 
 {% block content %}
 <div class="home-container">
+
   <h2>🎮 Comandante: {{ current_user.username }}</h2>
 
-  <!-- ✅ STATUS DA MISSÃO -->
   <div class="status-geral">
-    <div class="status-card">
-      <span>🏆</span>
-      <h4>Áreas Dominadas</h4>
-      <p>{{ conquistas | length }}</p>
-    </div>
-    <div class="status-card">
-      <span>📏</span>
-      <h4>Distância Total</h4>
-      <p>{{ distancia_total }} km</p>
-    </div>
-    <div class="status-card">
-      <span>⏱️</span>
-      <h4>Tempo Total</h4>
-      <p>{{ tempo_total }} min</p>
-    </div>
+    <div class="status-card"><span>🏆</span><h4>Áreas Dominadas</h4><p>{{ conquistas | length }}</p></div>
+    <div class="status-card"><span>📏</span><h4>Distância Total</h4><p>{{ distancia_total }} km</p></div>
+    <div class="status-card"><span>⏱️</span><h4>Tempo Total</h4><p>{{ tempo_total }} min</p></div>
   </div>
 
-  <!-- ✅ CARD DE ÁREAS CONQUISTADAS -->
-  <h3 class="titulo-setor">🛡️ Setores Dominados</h3>
-  <div class="cards-conquista">
+  {% if conquistas|length > 0 %}
+  <div class="carrossel-setores" style="justify-content: center;">
     {% for c in conquistas %}
-    <div class="card-area">
+    <div class="card-area" onclick="focarNoSetor({{ loop.index0 }})">
       <div class="header-area">
         <h4>{{ c.nome_area }}</h4>
         <span class="categoria-tag">{{ c.categoria or 'N/A' }}</span>
       </div>
-      <p><strong>📍 Distância:</strong> {{ c.distancia_km }} km</p>
-      <p><strong>⏱️ Duração:</strong> {{ c.duracao_minutos }} min</p>
-      <p><strong>🕒 Data:</strong> {{ c.timestamp.strftime('%d/%m/%Y %H:%M') }}</p>
+      <div class="info-area">
+        <p><strong>📍 Distância:</strong> {{ '%.2f' % c.distancia_km }} km</p>
+        <p><strong>⏱️ Duração:</strong> {{ c.duracao_minutos }} min</p>
+        <p><strong>🕒 Data:</strong> {{ c.timestamp.strftime('%d/%m/%Y %H:%M') }}</p>
+      </div>
     </div>
     {% endfor %}
-    {% if conquistas|length == 0 %}
-    <div class="sem-conquistas">
-      <p>🚫 Nenhuma área registrada.</p>
-      <a href="{{ url_for('routes.nova_conquista') }}" class="btn-ver-mapa">📍 Iniciar Missão</a>
-    </div>
-    {% endif %}
   </div>
+  {% else %}
+  <div class="sem-conquistas">
+    <p>🚫 Nenhuma área registrada.</p>
+    <a href="{{ url_for('routes.nova_conquista') }}" class="btn-ver-mapa">📍 Iniciar Missão</a>
+  </div>
+  {% endif %}
 
-  <!-- ✅ MAPA INTERATIVO DAS ÁREAS -->
-  <h3 class="titulo-setor">🗺️ Mapa de Territórios</h3>
-  <div id="map" style="height: 400px; border-radius: 8px; margin-top: 10px;"></div>
+  <div id="map" class="map-container" style="margin-top: 30px;"></div>
+
   <script>
-    var map = L.map('map').setView([-5.8161, -35.2889], 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    let setores = [];
+    let map;
+    let mapaCarregado = false;
 
-    {% for c in conquistas %}
-      {% if c.poligono_geojson %}
-        L.polygon({{ c.poligono_geojson|safe }}, {
-          color: '#16a085',
-          fillOpacity: 0.4,
-          weight: 2
-        }).addTo(map).bindPopup(`<strong>{{ c.nome_area }}</strong><br>{{ c.timestamp.strftime('%d/%m/%Y') }}`);
-      {% endif %}
-    {% endfor %}
+    function focarNoSetor(index) {
+      if (!mapaCarregado || setores.length === 0) {
+        alert("⏳ O mapa está carregando. Tente novamente em instantes.");
+        return;
+      }
+      const setor = setores[parseInt(index)];
+      if (setor) {
+        map.fitBounds(setor.getBounds());
+        setor.openPopup();
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+      map = L.map('map').setView([-5.8161, -35.2889], 14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          function(pos) {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+
+            map.setView([lat, lng], 15);
+            L.marker([lat, lng]).addTo(map)
+              .bindPopup(`📍 Sua posição atual:<br>Lat: ${lat.toFixed(5)}<br>Lng: ${lng.toFixed(5)}`)
+              .openPopup();
+          },
+          function(error) {
+            console.warn("⚠️ Não foi possível obter a localização: ", error.message);
+            // Pode manter o ponto padrão aqui, caso falhe
+          }
+        );
+      } else {
+        console.warn("❌ Geolocalização não suportada neste navegador.");
+      }
+
+
+      {% for c in conquistas %}
+        {% if c.geojson %}
+          let camada;
+          const dados = {{ c.geojson | tojson | safe }};
+          const tipo = dados.geometry.type;
+          const coords = dados.geometry.coordinates;
+          const opcoes = { color: '#16a085', fillOpacity: 0.4, weight: 2 };
+
+          if (tipo === "Polygon") {
+            camada = L.polygon(coords[0].map(p => [p[1], p[0]]), opcoes);
+          } else if (tipo === "LineString") {
+            camada = L.polyline(coords.map(p => [p[1], p[0]]), opcoes);
+          }
+
+          if (camada) {
+            const popupHtml = `
+              <strong>{{ c.nome_area | tojson }}</strong><br>
+              📏 {{ c.distancia_km | tojson }} km<br>
+              ⏱️ {{ c.duracao_minutos | tojson }} min<br>
+              🕒 {{ c.timestamp.strftime('%d/%m/%Y %H:%M') | tojson }}
+            `;
+            camada.bindPopup(popupHtml);
+            camada.addTo(map);
+            setores.push(camada);
+          }
+        {% endif %}
+      {% endfor %}
+
+      mapaCarregado = true;
+      if (setores.length === 0) {
+        // Exibe posição atual como ponto tático padrão
+        const latDefault = -5.9161;  // Substitua por coordenadas reais, se disponíveis
+        const lngDefault = -35.2618;
+        map.setView([latDefault, lngDefault], 15);
+
+        const marcadorPosicao = L.marker([latDefault, lngDefault]).addTo(map)
+          .bindPopup(`📍 Ponto de partida:<br>Lat: ${latDefault.toFixed(5)}<br>Lng: ${lngDefault.toFixed(5)}`)
+          .openPopup();
+      }
+
+
+      map.on('click', function(e) {
+        const { lat, lng } = e.latlng;
+        if (window.marcadorClique) {
+          map.removeLayer(window.marcadorClique);
+        }
+        window.marcadorClique = L.marker([lat, lng]).addTo(map)
+          .bindPopup(`📍 Ponto tático:<br>Lat: ${lat.toFixed(5)}<br>Lng: ${lng.toFixed(5)}`)
+          .openPopup();
+      });
+    });
   </script>
 
-  <!-- ✅ MOTIVAÇÃO FINAL -->
   <div class="motivacional">
-    <p>"Nenhum território é inalcançável. Corra, explore, conquiste!" 💥</p>
+    <p>"Cada passo é território conquistado. Avance!" 🚀</p>
   </div>
 </div>
 {% endblock %}

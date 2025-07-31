@@ -1,0 +1,77 @@
+.form-container {
+  max-width: 400px;
+  margin: auto;
+  background-color: #fff;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.titulo-cadastro {
+  text-align: center;
+  color: #0077cc;
+  margin-bottom: 20px;
+}
+
+.formulario-autenticacao label {
+  display: block;
+  margin-top: 12px;
+  font-weight: bold;
+  color: #333;
+}
+
+.formulario-autenticacao input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 6px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.botao-cadastro {
+  width: 100%;
+  padding: 12px;
+  margin-top: 20px;
+  background-color: #0077cc;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.botao-cadastro:hover {
+  background-color: #005fa3;
+}
+
+.link-login {
+  margin-top: 15px;
+  text-align: center;
+  font-size: 0.95em;
+}
+
+.link-login a {
+  color: #0077cc;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.link-login a:hover {
+  text-decoration: underline;
+}
+
+.mensagem-feedback {
+  background-color: #eaf4fc;
+  border-left: 4px solid #0077cc;
+  padding: 10px 14px;
+  margin-bottom: 15px;
+  border-radius: 6px;
+}
+
+.mensagem-alerta {
+  margin: 0;
+  font-weight: bold;
+  color: #0077cc;
+}

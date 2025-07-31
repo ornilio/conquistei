@@ -1,7 +1,11 @@
+/* 🌐 Base visual tática */
+
+/* 🎖️ Status geral do usuário */
 .status-geral {
   display: flex;
   justify-content: space-around;
   margin: 20px 0;
+  flex-wrap: wrap;
 }
 
 .status-card {
@@ -11,39 +15,175 @@
   border-radius: 12px;
   box-shadow: 0 0 10px #0abde3;
   text-align: center;
-  flex: 1;
-  margin: 0 10px;
+  flex: 1 1 200px;
+  margin: 10px;
 }
 
-.cards-conquista {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+/* 🧭 Carrossel de setores dominados */
+.carrossel-setores {
+  display: flex;
   gap: 16px;
+  overflow-x: auto;
+  padding: 10px 0;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+.carrossel-setores::-webkit-scrollbar {
+  display: none;
 }
 
 .card-area {
   background-color: #2f3640;
   border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   padding: 16px;
-  color: white;
-  box-shadow: 0 0 10px #4cd137;
+  min-width: min(240px, 80vw);
+  scroll-snap-align: start;
+  flex-shrink: 0;
   transition: transform 0.3s ease;
+  color: #fff;
+  word-wrap: break-word;
 }
 
 .card-area:hover {
   transform: scale(1.03);
+  background-color: #3c4452;
 }
 
+/* 🔖 Cabeçalho do card */
 .header-area {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
+.header-area h4 {
+  margin: 0;
+  font-size: 1.2em;
+}
 
+/* 📌 Tag de categoria */
 .categoria-tag {
-  background-color: #353b48;
+  background-color: #00a8ff;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 0.8em;
-  color: #f5f6fa;
+  color: white;
+  margin-left: 6px;
+}
+
+/* 🔍 Botão "Ver no Mapa" */
+.btn-localizar {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  margin-top: 10px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+.btn-localizar:hover {
+  background-color: #2980b9;
+}
+
+/* 🗺️ Mapa */
+.map-container {
+  height: 400px;
+  width: 100%;
+  max-width: 100%;
+  border-radius: 0;
+}
+
+/* 📦 Texto informativo quando não há conquistas */
+.sem-conquistas {
+  text-align: center;
+  margin: 20px 0;
+}
+
+/* 📍 Botão fixo (opcional) */
+.botao-fixo {
+  position: fixed;
+  bottom: 15px;
+  right: 15px;
+  background-color: #00a8ff;
+  padding: 10px 16px;
+  border-radius: 50px;
+  font-size: 0.9em;
+  color: white;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  cursor: pointer;
+  z-index: 999;
+}
+
+/* 📲 Mobile: até 768px */
+@media (max-width: 768px) {
+  .home-container {
+    padding: 15px;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .status-geral {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .status-card {
+    margin-bottom: 10px;
+    width: 90%;
+  }
+
+  .carrossel-setores {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .card-area {
+    width: 100%;
+    font-size: 0.95rem;
+    padding: 12px;
+  }
+
+  .map-container {
+    height: calc(100vw * 0.6);
+    max-height: 400px;
+  }
+
+  .motivacional {
+    font-size: 0.9rem;
+    padding: 10px;
+  }
+
+  .header-area h4 {
+    font-size: 1rem;
+  }
+
+  .info-area p {
+    font-size: 0.85rem;
+    line-height: 1.4;
+  }
+
+  .botao-fixo {
+    bottom: 10px;
+    right: 10px;
+    font-size: 0.85em;
+  }
+}
+
+/* 📱 Mobile extra: até 480px */
+@media (max-width: 480px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+/* 🔒 Layout base */
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  font-size: 16px;
 }

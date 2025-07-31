@@ -140,7 +140,7 @@ def criar_usuario():
 @routes.route("/home")
 def home():
     try:
-        # Valida o token JWT
+        # 🔐 Valida o token JWT
         verify_jwt_in_request()
         usuario_id = get_jwt_identity()
     except Exception as e:
@@ -148,13 +148,13 @@ def home():
         flash("Token inválido ou ausente.")
         return redirect(url_for("routes.login_page"))
 
-    # Busca o usuário pelo ID
+    # 👤 Busca o usuário pelo ID
     usuario = Usuario.query.get(usuario_id)
     if not usuario:
         flash("Usuário não encontrado.")
         return redirect(url_for("routes.login_page"))
 
-    # Busca todas as conquistas do usuário via join com Missao
+    # 🧭 Busca todas as conquistas do usuário via join com Missao
     conquistas = (
         QuarteiraoConquistado.query
         .join(QuarteiraoConquistado.missao)
@@ -163,12 +163,21 @@ def home():
         .all()
     )
 
-    # Busca todas as missões do usuário para somar tempo/distância
+    # 🛠️ Enriquecendo cada conquista com tempo/distância da missão
+    for conquista in conquistas:
+        if conquista.missao:
+            # Arredondando com precisão de 2 casas decimais
+            conquista.distancia_km = round(conquista.missao.distancia_km or 0, 2)
+            conquista.duracao_minutos = conquista.missao.duracao_minutos or 0
+
+    # 📊 Soma total de tempo/distância de todas as missões
     missoes = Missao.query.filter_by(usuario_id=usuario_id).all()
     tempo_total = sum(m.duracao_minutos for m in missoes if m.duracao_minutos)
     distancia_total = round(sum(m.distancia_km for m in missoes if m.distancia_km), 2)
+
     print("Tempo total:", tempo_total)
-    # Renderiza o template com os dados
+
+    # 🖥️ Renderiza o template com todos os dados prontos
     return render_template(
         "home.html",
         usuario=usuario,
@@ -296,30 +305,53 @@ def registrar_missao_completa():
     dados = request.get_json()
     print("Dados recebidos na missão:", dados)
 
-
     # Cria missão
     nova_missao = Missao(
-        usuario_id = dados.get('usuario_id'),
-        duracao_minutos = dados.get('duracao_minutos'),
-        distancia_km = dados.get('distancia_km'),
-        data = datetime.utcnow()
+        usuario_id=dados.get('usuario_id'),
+        duracao_minutos=dados.get('duracao_minutos'),
+        distancia_km=dados.get('distancia_km'),
+        data=datetime.utcnow()
     )
     db.session.add(nova_missao)
     db.session.commit()
 
     # Salva cada área conquistada
-    for area in dados.get('conquistas', []):
+    for area_coords in dados.get('conquistas', []):
+        pontos = area_coords[0]  # Extrai os pontos [[lng, lat], ...]
+
+        if not pontos or len(pontos) < 2:
+            continue  # Ignora se não tem trajeto
+
+        # Remove pontos duplicados (ex: usuário parado)
+        pontos_unicos = [p for i, p in enumerate(pontos) if i == 0 or p != pontos[i - 1]]
+        if len(pontos_unicos) < 2:
+            continue  # Ignora se não houve movimento real
+
+        # Detecta se é Polygon ou LineString
+        tipo = "Polygon" if pontos_unicos[0] == pontos_unicos[-1] and len(pontos_unicos) >= 4 else "LineString"
+        coordenadas = [pontos_unicos] if tipo == "Polygon" else pontos_unicos
+
+        geojson = {
+            "type": "Feature",
+            "geometry": {
+                "type": tipo,
+                "coordinates": coordenadas
+            },
+            "properties": {
+                "categoria": "Área fechada" if tipo == "Polygon" else "Patrulha aberta"
+            }
+        }
+
         quarteirao = QuarteiraoConquistado(
-            missao_id = nova_missao.id,
-            nome_area = gerar_nome_area(),
-            poligono_geojson = area,
-            timestamp = datetime.utcnow()
+            missao_id=nova_missao.id,
+            nome_area=gerar_nome_area(),
+            poligono_geojson=geojson,
+            timestamp=datetime.utcnow()
         )
         db.session.add(quarteirao)
 
     db.session.commit()
-    return jsonify({'mensagem': 'Missão e quarteirões salvos com sucesso!'})
-
+    return jsonify({'mensagem': 'Missão salva com sucesso!'})
 
 
 @routes.route('/minhas-conquistas', methods=['GET'])
