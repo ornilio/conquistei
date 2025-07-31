@@ -1,0 +1,49 @@
+.status-geral {
+  display: flex;
+  justify-content: space-around;
+  margin: 20px 0;
+}
+
+.status-card {
+  background: #1e272e;
+  color: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 0 10px #0abde3;
+  text-align: center;
+  flex: 1;
+  margin: 0 10px;
+}
+
+.cards-conquista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.card-area {
+  background-color: #2f3640;
+  border-radius: 12px;
+  padding: 16px;
+  color: white;
+  box-shadow: 0 0 10px #4cd137;
+  transition: transform 0.3s ease;
+}
+
+.card-area:hover {
+  transform: scale(1.03);
+}
+
+.header-area {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.categoria-tag {
+  background-color: #353b48;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8em;
+  color: #f5f6fa;
+}
