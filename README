@@ -1,0 +1,27 @@
+# 🗺️ Domínio Missions
+
+Web app gamificado para conquistar territórios geográficos usando geolocalização e mapas interativos.
+
+## Funcionalidades
+- Missões com rastreamento em tempo real
+- Áreas conquistadas com visualização em mapa
+- Painel de comando personalizado para cada usuário
+
+## Tecnologias
+- Flask, SQLAlchemy
+- Leaflet.js + Mapbox
+- HTML, CSS, JS
+
+## Instalação
+```bash
+pip install -r requirements.txt
+python run.py
+
+---
+
+### ✅ 5. Subir arquivos
+
+```bash
+git add .
+git commit -m "🚀 Versão inicial do Domínio Missions"
+git push origin main

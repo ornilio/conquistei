@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Conquistei{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+  <!-- Cabeçalho completo -->
+  <div class="top-bar">
+    <div class="user-box">
+      <img src="{{ url_for('static', filename='avatars/' ~ current_user.avatar) }}" class="avatar">
+      <span class="user-name">{{ current_user.username }}</span>
+    </div>
+    <div class="user-actions">
+      <a href="{{ url_for('routes.home') }}"  class="user-action">🏠 Início</a>
+      <a href="{{ url_for('routes.nova_conquista') }}" class="user-action">🏆 Minhas Conquistas</a>
+      <a href="{{ url_for('routes.nova_conquista') }}" class="user-action">📍 Nova Conquista</a>
+      <a href="{{ url_for('routes.editar_perfil') }}" class="user-action">🧙 Perfil</a>
+      <a href="{{ url_for('routes.logout') }}" class="user-action">🚪 Sair</a>  
+    </div>
+  </div>
+
+  <!-- Conteúdo principal -->
+  <main class="conteudo">
+    {% block content %}
+    {% endblock %}
+  </main>
+
+  <!-- Rodapé -->
+  <footer class="rodape">
+    <div>
+      Desenvolvido por <strong>64Bits Informática</strong> &copy; {{ ano if ano else "2025" }}
+    </div>
+  </footer>
+
+  {% block extra_scripts %}
+  {% endblock %}
+
+
+</body>
+</html>

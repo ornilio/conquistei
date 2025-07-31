@@ -1,0 +1,107 @@
+/* ----------- RESET ----------- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ----------- BODY E CONTAINER ----------- */
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f4f6f8;
+  color: #333;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.login-container {
+  background-color: #fff;
+  padding: 40px;
+  max-width: 400px;
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.08);
+  text-align: center;
+}
+
+/* ----------- TÍTULO ----------- */
+.login-container h2 {
+  font-size: 28px;
+  margin-bottom: 24px;
+  color: #0077cc;
+}
+
+/* ----------- FORMULÁRIO ----------- */
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+label {
+  font-weight: 600;
+  color: #444;
+  text-align: left;
+}
+
+input[type="text"],
+input[type="password"] {
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  font-size: 16px;
+}
+
+/* ----------- BOTÃO DE LOGIN ----------- */
+input[type="submit"] {
+  padding: 12px;
+  background-color: #0077cc;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+input[type="submit"]:hover {
+  background-color: #005fa3;
+}
+
+/* ----------- MENSAGEM DE ERRO ----------- */
+.message {
+  margin-top: 12px;
+  color: #e74c3c;
+  font-weight: bold;
+  text-align: center;
+}
+
+/* ----------- LINKS DE AJUDA ----------- */
+.extra-links {
+  margin-top: 20px;
+  font-size: 14px;
+}
+
+.extra-links a {
+  color: #1abc9c;
+  text-decoration: none;
+  margin: 0 8px;
+}
+
+.extra-links a:hover {
+  text-decoration: underline;
+}
+
+/* ----------- RESPONSIVO ----------- */
+@media (max-width: 480px) {
+  .login-container {
+    padding: 20px;
+  }
+
+  .login-container h2 {
+    font-size: 22px;
+  }
+}

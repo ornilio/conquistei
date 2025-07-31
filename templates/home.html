@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Base de Comando - Áreas Dominadas{% endblock %}
+
+{% block head %}
+  <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}" type="image/png">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/base_comando.css') }}">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="home-container">
+  <h2>🛡️ Território de {{ current_user.username }}</h2>
+
+  {% with mensagens = get_flashed_messages() %}
+    {% if mensagens %}
+      <div class="flash-messages">
+        {% for mensagem in mensagens %}
+          <p class="flash">{{ mensagem }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  {% if conquistas and conquistas|length > 0 %}
+    <div class="status-geral">
+      <p>Você já conquistou <strong>{{ conquistas | length }}</strong> territórios!</p>
+      <p><strong>{{ distancia_total }} km</strong> percorridos em <strong>{{ tempo_total }} min</strong> de missão.</p>
+    </div>
+
+    <div id="map" style="height: 400px;"></div>
+    <script>
+      var map = L.map('map').setView([-5.8161, -35.2889], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+      {% for c in conquistas %}
+        {% if c.poligono_geojson %}
+          L.polygon({{ c.poligono_geojson|safe }}, {
+            color: '#e67e22',
+            fillOpacity: 0.5
+          }).addTo(map).bindPopup("<b>{{ c.nome_area }}</b><br>{{ c.timestamp.strftime('%d/%m/%Y') }}");
+        {% endif %}
+      {% endfor %}
+    </script>
+  {% else %}
+    <div class="sem-missoes">
+      <p>🚫 Nenhuma área dominada ainda.</p>
+      <a href="{{ url_for('routes.nova_conquista') }}" class="btn-ver-mapa">📍 Iniciar Missão</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

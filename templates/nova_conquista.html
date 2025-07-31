@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+
+{% block title %}Mapa de Domínio{% endblock %}
+
+{% block content %}
+<div class="mapa-wrapper">
+  <h2>🗺️ Mapa de Domínio</h2>
+
+  <div class="controle-batalha">
+    <button id="botao-iniciar" class="btn-conquista">🚩 Invadir Território</button>
+    <button id="botao-finalizar" class="btn-conquista">🏁 Consolidar Domínio</button>
+
+    <div class="painel-status">
+      <span>⏱️ Duração: <strong id="cronometro">00:00</strong></span>
+      <span>📏 Distância: <strong id="km">0.00 km</strong></span>
+    </div>
+  </div>
+
+  <div id="map"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+<script>
+const USUARIO_ID = {{ usuario_id | tojson }};
+</script>
+
+<script>
+mapboxgl.accessToken = 'pk.eyJ1Ijoib3JuaWxpbyIsImEiOiJjbWRxaWJoaGkwNzIwMmtvaGZrZ2syYnhhIn0.B-Xn2pnpA2rg2vGbyohZxw';
+
+const map = new mapboxgl.Map({
+  container: 'map',
+  style: 'mapbox://styles/mapbox/streets-v12',
+  center: [-35.3575, -5.8143],
+  zoom: 20
+});
+let userMarker;
+let trackingActive = false;
+let routeCoords = [];
+let watcherId = null;
+let inicioMissao = null;
+let cronometroInterval = null;
+let conquistas = [];
+
+navigator.geolocation.watchPosition((position) => {
+  const { latitude, longitude, accuracy } = position.coords;
+  const currentPos = [longitude, latitude];
+
+  if (!trackingActive) {
+    map.flyTo({ center: currentPos, essential: true });
+  }
+
+  if (userMarker) userMarker.remove();
+  userMarker = new mapboxgl.Marker({ color: '#3498db' })
+    .setLngLat(currentPos)
+    .setPopup(new mapboxgl.Popup().setText("📍 Você está aqui!"))
+    .addTo(map);
+}, handleError, {
+  enableHighAccuracy: true,
+  timeout: 30000,
+  maximumAge: 0
+});
+
+function updateLocation(position) {
+  const { latitude, longitude, accuracy } = position.coords;
+  const currentPos = [longitude, latitude];
+
+  if (trackingActive) {
+    routeCoords.push(currentPos);
+    atualizarDistancia();
+
+    const geojson = {
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: routeCoords }
+    };
+
+    if (map.getSource('route')) {
+      map.getSource('route').setData(geojson);
+    } else {
+      map.addSource('route', { type: 'geojson', data: geojson });
+      map.addLayer({
+        id: 'route',
+        type: 'line',
+        source: 'route',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color': '#e74c3c',
+          'line-width': 4,
+          'line-opacity': 0.8
+        }
+      });
+    }
+
+    map.flyTo({ center: currentPos, essential: true });
+
+    if (routeCoords.length >= 4) {
+      const primeiro = routeCoords[0];
+      const ultimo = routeCoords[routeCoords.length - 1];
+      const distanciaFechamento = calcularDistanciaTotal([primeiro, ultimo]);
+      if (distanciaFechamento <= 0.03) {
+        salvarQuarteirao(routeCoords);
+        routeCoords = [ultimo];
+      }
+    }
+  }
+
+  if (userMarker) userMarker.remove();
+  userMarker = new mapboxgl.Marker({ color: '#2ecc71' })
+    .setLngLat(currentPos)
+    .setPopup(new mapboxgl.Popup().setText("📍 Você está aqui!"))
+    .addTo(map);
+}
+
+function salvarQuarteirao(coords) {
+  const polygon = {
+    type: 'Feature',
+    geometry: {
+      type: 'Polygon',
+      coordinates: [[...coords, coords[0]]]
+    }
+  };
+
+  const layerId = 'quarteirao-' + conquistas.length;
+  map.addSource(layerId, { type: 'geojson', data: polygon });
+  map.addLayer({
+    id: layerId,
+    type: 'fill',
+    source: layerId,
+    paint: { 'fill-color': '#f1c40f', 'fill-opacity': 0.4 }
+  });
+
+  conquistas.push(polygon);
+  console.log("🟨 Quarteirão conquistado automaticamente.");
+}
+
+function handleError(err) {
+  console.error("Erro na geolocalização:", err.message);
+  alert("Erro: " + err.message);
+}
+
+function calcularDistanciaTotal(coordList) {
+  let distancia = 0;
+  for (let i = 1; i < coordList.length; i++) {
+    const [lng1, lat1] = coordList[i - 1];
+    const [lng2, lat2] = coordList[i];
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    distancia += R * c;
+  }
+  return distancia.toFixed(2);
+}
+
+function atualizarCronometro() {
+  const agora = Date.now();
+  const duracaoMs = agora - inicioMissao;
+  const minutos = Math.floor(duracaoMs / 60000);
+  const segundos = Math.floor((duracaoMs % 60000) / 1000);
+  document.getElementById("cronometro").textContent =
+    `${String(minutos).padStart(2, "0")}:${String(segundos).padStart(2, "0")}`;
+}
+
+function atualizarDistancia() {
+  const todosCoords = conquistas.flatMap(c => c.geometry.coordinates[0]);
+  const km = calcularDistanciaTotal(todosCoords);
+  document.getElementById("km").textContent = `${km} km`;
+}
+
+document.getElementById("botao-iniciar").addEventListener("click", () => {
+  inicioMissao = Date.now();
+  routeCoords = [];
+  trackingActive = true;
+  cronometroInterval = setInterval(atualizarCronometro, 1000);
+  document.getElementById("cronometro").textContent = "00:00";
+  document.getElementById("km").textContent = "0.00 km";
+
+  watcherId = navigator.geolocation.watchPosition(updateLocation, handleError, {
+    enableHighAccuracy: true,
+    timeout: 15000,
+    maximumAge: 0
+  });
+});
+
+document.getElementById("botao-finalizar").addEventListener("click", async () => {
+  if (!inicioMissao) {
+    alert("⚠️ Missão ainda não iniciada.");
+    return;
+  }
+
+  trackingActive = false;
+  if (watcherId) navigator.geolocation.clearWatch(watcherId);
+  clearInterval(cronometroInterval);
+
+  const primeiro = routeCoords[0];
+  const ultimo = routeCoords[routeCoords.length - 1];
+
+  const poligono = {
+    type: 'Feature',
+    geometry: {
+      type: 'Polygon',
+      coordinates: [[
+        primeiro,
+        ultimo,
+        [ultimo[0], primeiro[1]],  // canto superior/inferior
+        [primeiro[0], ultimo[1]],  // canto oposto
+        primeiro                  // fecha o loop
+      ]]
+    }
+  };
+
+  conquistas = [poligono];  // substitui as conquistas acumuladas
+
+  const duracaoMinutos = Math.ceil((Date.now() - inicioMissao) / 60000);
+  const distanciaKm = calcularDistanciaTotal([primeiro, ultimo]);
+
+  try {
+    const resposta = await fetch("/registrar-missao", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        usuario_id: USUARIO_ID,
+        duracao_minutos: duracaoMinutos,
+        distancia_km: distanciaKm,
+        conquistas: conquistas.map(p => p.geometry.coordinates)
+      })
+    });
+
+    const resultado = await resposta.json();
+    alert("✅ Missão encerrada: " + resultado.mensagem);
+  } catch (erro) {
+    console.error("Erro ao enviar dados:", erro);
+    alert("⚠️ Falha ao registrar conquista.");
+  }
+});
+
+</script>
+
+
+<style>
+
+
+.controle-batalha {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.btn-conquista {
+  padding: 12px 20px;
+  font-size: 16px;
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.btn-conquista:hover {
+  background-color: #27ae60;
+}
+
+.painel-status {
+  display: flex;
+  gap: 16px;
+  font-weight: bold;
+  font-size: 16px;
+  color: #2c3e50;
+}
+</style>
+{% endblock %}
