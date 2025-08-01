@@ -43,6 +43,7 @@ class QuarteiraoConquistado(db.Model):
     nome_area = db.Column(db.String(100))
     poligono_geojson = db.Column(db.JSON)
     timestamp = db.Column(db.DateTime)
+    categoria = db.Column(db.String(50))
 
     # ✅ Relacionamento explícito com Missao
     missao = relationship("Missao", backref="quarteiroes")

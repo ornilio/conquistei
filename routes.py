@@ -155,6 +155,7 @@ def criar_usuario():
     db.session.commit()
 
     return jsonify({'mensagem': 'Usuário cadastrado com sucesso!'}), 201
+
 @routes.route("/home")
 @login_required
 def home():
@@ -172,6 +173,10 @@ def home():
         if conquista.missao:
             conquista.distancia_km = round(conquista.missao.distancia_km or 0, 2)
             conquista.duracao_minutos = conquista.missao.duracao_minutos or 0
+        # Garante que o campo está presente
+        conquista.poligono_geojson = conquista.poligono_geojson or {}
+
+
 
     tempo_total = sum(m.duracao_minutos for m in missoes if m.duracao_minutos)
     distancia_total = round(sum(m.distancia_km for m in missoes if m.distancia_km), 2)
@@ -322,7 +327,9 @@ def registrar_missao_completa():
             missao_id=nova_missao.id,
             nome_area=gerar_nome_area(),
             poligono_geojson=geojson,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow(),
+            categoria=geojson['properties']['categoria']
+
         )
         db.session.add(quarteirao)
 
@@ -343,7 +350,7 @@ def listar_conquistas():
         'timestamp': c.timestamp.isoformat(),
         'distancia_km': c.missao.distancia_km,
         'duracao_minutos': c.missao.duracao_minutos,
-        'categoria': getattr(c, 'categoria', None)
+        'categoria': c.categoria
     } for c in conquistas]
 
     return jsonify(resultado), 200

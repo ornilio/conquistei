@@ -12,8 +12,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="home-container">
-
+<div class="home-container" style="text-align: center;">
   <h2>🎮 Comandante: {{ current_user.username }}</h2>
 
   <div class="status-geral">
@@ -67,34 +66,14 @@
     document.addEventListener("DOMContentLoaded", function() {
       map = L.map('map').setView([-5.8161, -35.2889], 14);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          function(pos) {
-            const lat = pos.coords.latitude;
-            const lng = pos.coords.longitude;
-
-            map.setView([lat, lng], 15);
-            L.marker([lat, lng]).addTo(map)
-              .bindPopup(`📍 Sua posição atual:<br>Lat: ${lat.toFixed(5)}<br>Lng: ${lng.toFixed(5)}`)
-              .openPopup();
-          },
-          function(error) {
-            console.warn("⚠️ Não foi possível obter a localização: ", error.message);
-            // Pode manter o ponto padrão aqui, caso falhe
-          }
-        );
-      } else {
-        console.warn("❌ Geolocalização não suportada neste navegador.");
-      }
-
 
       {% for c in conquistas %}
-        {% if c.geojson %}
-          let camada;
-          const dados = {{ c.geojson | tojson | safe }};
-          const tipo = dados.geometry.type;
-          const coords = dados.geometry.coordinates;
-          const opcoes = { color: '#16a085', fillOpacity: 0.4, weight: 2 };
+        {% if c.poligono_geojson and 'geometry' in c.poligono_geojson %}
+          var dados = {{ c.poligono_geojson['geometry'] | tojson | safe }};
+          var tipo = dados.type;
+          var coords = dados.coordinates;
+          var opcoes = { color: '#16a085', fillOpacity: 0.4, weight: 2 };
+          var camada;
 
           if (tipo === "Polygon") {
             camada = L.polygon(coords[0].map(p => [p[1], p[0]]), opcoes);
@@ -103,11 +82,11 @@
           }
 
           if (camada) {
-            const popupHtml = `
-              <strong>{{ c.nome_area | tojson }}</strong><br>
-              📏 {{ c.distancia_km | tojson }} km<br>
-              ⏱️ {{ c.duracao_minutos | tojson }} min<br>
-              🕒 {{ c.timestamp.strftime('%d/%m/%Y %H:%M') | tojson }}
+            var popupHtml = `
+              <strong>{{ c.nome_area }}</strong><br>
+              📏 {{ '%.2f' % c.distancia_km }} km<br>
+              ⏱️ {{ c.duracao_minutos }} min<br>
+              🕒 {{ c.timestamp.strftime('%d/%m/%Y %H:%M') }}
             `;
             camada.bindPopup(popupHtml);
             camada.addTo(map);
@@ -116,18 +95,14 @@
         {% endif %}
       {% endfor %}
 
-      mapaCarregado = true;
       if (setores.length === 0) {
-        // Exibe posição atual como ponto tático padrão
-        const latDefault = -5.9161;  // Substitua por coordenadas reais, se disponíveis
+        const latDefault = -5.9161;
         const lngDefault = -35.2618;
         map.setView([latDefault, lngDefault], 15);
-
-        const marcadorPosicao = L.marker([latDefault, lngDefault]).addTo(map)
-          .bindPopup(`📍 Ponto de partida:<br>Lat: ${latDefault.toFixed(5)}<br>Lng: ${lngDefault.toFixed(5)}`)
+        L.marker([latDefault, lngDefault]).addTo(map)
+          .bindPopup(`📍 Ponto de partida:<br>Lat: ${latDefault}<br>Lng: ${lngDefault}`)
           .openPopup();
       }
-
 
       map.on('click', function(e) {
         const { lat, lng } = e.latlng;
@@ -138,6 +113,24 @@
           .bindPopup(`📍 Ponto tático:<br>Lat: ${lat.toFixed(5)}<br>Lng: ${lng.toFixed(5)}`)
           .openPopup();
       });
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          function(pos) {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            map.setView([lat, lng], 15);
+            L.marker([lat, lng]).addTo(map)
+              .bindPopup(`📍 Sua posição atual:<br>Lat: ${lat.toFixed(5)}<br>Lng: ${lng.toFixed(5)}`)
+              .openPopup();
+          },
+          function(error) {
+            console.warn("⚠️ Erro na geolocalização:", error.message);
+          }
+        );
+      }
+
+      mapaCarregado = true;
     });
   </script>
 
